@@ -95,32 +95,44 @@ class KuisForm extends Component
             }
             
             $soalList = [];
+            $kuisSoalIdList = [];
             foreach ($this->questions as $question) {
+                $kuisSoalId = $question['kuis_soal_id'] ?? null;
+                if (!is_null($kuisSoalId)) $kuisSoalIdList[] = $kuisSoalId;
                 $soalList[] = [
-                    'kuis_soal_id' => $question['kuis_soal_id'] ?? null,
+                    'kuis_soal_id' => $kuisSoalId,
                     'kuis_id' => $quiz->kuis_id,
                     'soal' => $question['soal'],
                     'poin' => $question['poin'],
                 ];
             }
-            
+            KuisSoal::where('kuis_id', $quiz->kuis_id)
+                ->whereNotIn('kuis_soal_id', $kuisSoalIdList)
+                ->delete();
             KuisSoal::upsert($soalList, 'kuis_soal_id');
             $kuisSoalId = KuisSoal::where('kuis_id', $quiz->kuis_id)
                 ->pluck('kuis_soal_id')
                 ->toArray();
             
             $kuisSoalOpsiList = [];
+            $kuisSoalOpsiIdList = [];
             foreach ($kuisSoalId as $key => $value) {
                 foreach ($this->questions[$key]['options'] as $option) {
+                    $kuisSoalOpsiId = $option['kuis_soal_opsi_id'] ?? null;
+                    if (!is_null($kuisSoalOpsiId)) {
+                        $kuisSoalOpsiIdList[] = $kuisSoalOpsiId;
+                    }
                     $kuisSoalOpsiList[] = [
-                        'kuis_soal_opsi_id' => $option['kuis_soal_opsi_id'] ?? null,
+                        'kuis_soal_opsi_id' => $kuisSoalOpsiId,
                         'kuis_soal_id' => $value,
                         'jawaban' => $option['jawaban'],
                         'is_kunci_jawaban' => $option['is_kunci_jawaban'] ? 1 : 0,
                     ];
                 }
             }
-        
+            KuisSoalOpsi::whereIn('kuis_soal_id', $kuisSoalId)
+                ->whereNotIn('kuis_soal_opsi_id', $kuisSoalOpsiIdList)
+                ->delete();
             KuisSoalOpsi::upsert($kuisSoalOpsiList, 'kuis_soal_opsi_id');
 
             DB::commit();
